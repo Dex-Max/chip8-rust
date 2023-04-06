@@ -17,20 +17,24 @@ pub struct Chip8 {
 }
 
 impl Chip8 {
-    fn init(&mut self) {
-        self.mem.fill(0);
-        self.stack.fill(0);
-        self.sp = 0;
+    pub fn new() -> Chip8 {
+        Chip8 {
+            mem: [0; 4096],
+            stack: [0; 16],
+            sp: 0,
 
-        self.reg.fill(0);
-        self.i_reg = 0;
+            reg: [0; 16],
+            i_reg: 0,
 
-        self.pc = 0x200;
-        self.dt = 0;
-        self.st = 0;
+            pc: 0x200,
+            op: 0,
 
-        self.display.fill(false);
-        self.keys.fill(false);
+            dt: 0,
+            st: 0,
+
+            display: [false; 64 * 32],
+            keys: [false; 16]
+        }
     }
 
     fn load_program(&mut self, program: [u8; 3]) {
