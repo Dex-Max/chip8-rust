@@ -1,4 +1,4 @@
-use sdl2;
+use sdl2::Sdl;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::pixels::Color;
@@ -13,14 +13,13 @@ pub struct Display {
 }
 
 impl Display {
-    pub fn new() -> Display {
-        let video = sdl2::init().unwrap().video().unwrap();
+    pub fn new(sdl: &Sdl) -> Display {
+        let video = sdl.video().unwrap();
         let window = video.window("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE).opengl().build().unwrap();
         let mut canvas = window.into_canvas().build().unwrap();
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
         canvas.present();
-
 
         Display { canvas }
     }

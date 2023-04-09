@@ -1,6 +1,7 @@
 mod chip8;
 mod display;
 
+use sdl2::Sdl;
 use std::env;
 use std::fs;
 use std::time::Instant;
@@ -16,7 +17,8 @@ fn main() {
         Err(_) => { panic!("File not found!") }
     };
 
-    let mut display = Display::new();
+    let sdl = sdl2::init().unwrap();
+    let mut display = Display::new(&sdl);
     let mut processor = Chip8::new();
     let mut num_cycles = 0;
 
