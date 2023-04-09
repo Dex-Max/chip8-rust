@@ -85,7 +85,7 @@ impl Chip8 {
         self.mem[0x200..(0x200 + program.len())].copy_from_slice(program.as_slice());
     }
 
-    pub fn cycle(&mut self) -> State {
+    pub fn cycle(&mut self, keyboard: [bool; 16]) -> State {
         //let mut line = String::new();
         //let _ = std::io::stdin().read_line(&mut line).unwrap();
         if self.pc >= 4096 {
@@ -101,6 +101,7 @@ impl Chip8 {
         }
         println!("SP: {}", self.sp);
 
+        self.keys = keyboard;
         self.op = ((self.mem[self.pc as usize] as u16) << 8) | (self.mem[(self.pc + 1) as usize]) as u16;
         self.pc += 2;
         self.execute_instruction();
@@ -243,7 +244,21 @@ impl Chip8 {
                 self.draw_flag = true;
             }
             0xE => {
-                panic!("Not implemented");
+                match kk {
+                    0x9E => {
+                        if self.keys[self.reg[x] as usize] {
+                            self.pc += 2;
+                        }
+                    }
+                    0xA1 => {
+                        if !self.keys[self.reg[x] as usize] {
+                            self.pc += 2;
+                        }
+                    }
+                    _ => {
+                        panic!("Invalid opcode");
+                    }
+                }
             }
             0xF => {
                 match kk {
@@ -251,7 +266,18 @@ impl Chip8 {
                         self.reg[x] = self.dt;
                     }
                     0xA => {
-                        panic!("Not implemented");
+                        let mut pressed = false;
+
+                        for i in 0..16 {
+                            if self.keys[i] {
+                                self.reg[x] = i as u8;
+                                pressed = true;
+                            }
+                        }
+
+                        if !pressed {
+                            self.pc -= 2;
+                        }
                     }
                     0x15 => {
                         self.dt = self.reg[x];
