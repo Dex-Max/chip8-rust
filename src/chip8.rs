@@ -17,8 +17,8 @@ pub struct Chip8 {
     pc: u16,
     op: u16,
 
-    dt: u8,
-    st: u8,
+    pub dt: u8,
+    pub st: u8,
 
     pub display: [bool; 64 * 32],
     keys: [bool; 16],
