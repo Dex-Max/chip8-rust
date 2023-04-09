@@ -1,11 +1,16 @@
+use rand::Rng;
+
 pub enum State {
     Quit,
     Draw,
-    Run }
+    Run 
+}
 
 pub struct Chip8 {
     mem: [u8; 4096],
-    stack: [u16; 16], sp: u8,
+    stack: [u16; 16], 
+    sp: u8,
+
     reg: [u8; 16],
     i_reg: u16,
 
@@ -23,8 +28,30 @@ pub struct Chip8 {
 
 impl Chip8 {
     pub fn new() -> Chip8 {
+        let font: [u8; 80] = [
+            0xf0, 0x90, 0x90, 0x90, 0xf0,
+            0x20, 0x60, 0x20, 0x20, 0x70,
+            0xf0, 0x10, 0xf0, 0x80, 0xf0,
+            0xf0, 0x10, 0xf0, 0x10, 0xf0,
+            0x90, 0x90, 0xf0, 0x10, 0x10,
+            0xf0, 0x80, 0xf0, 0x10, 0xf0,
+            0xf0, 0x80, 0xf0, 0x90, 0xf0,
+            0xf0, 0x10, 0x20, 0x40, 0x40,
+            0xf0, 0x90, 0xf0, 0x90, 0xf0,
+            0xf0, 0x90, 0xf0, 0x10, 0xf0,
+            0xf0, 0x90, 0xf0, 0x90, 0x90,
+            0xe0, 0x90, 0xe0, 0x90, 0xe0,
+            0xf0, 0x80, 0x80, 0x80, 0xf0,
+            0xe0, 0x90, 0x90, 0x90, 0xe0,
+            0xf0, 0x80, 0xf0, 0x80, 0xf0,
+            0xf0, 0x80, 0xf0, 0x80, 0x80
+        ];
+
+        let mut mem = [0; 4096];
+        &mem[0..80].copy_from_slice(font.as_slice());
+
         Chip8 {
-            mem: [0; 4096],
+            mem,
             stack: [0; 16],
             sp: 0,
 
@@ -44,11 +71,23 @@ impl Chip8 {
         }
     }
 
+    fn push_stack(&mut self, val: u16) {
+        self.stack[self.sp as usize] = val; 
+        self.sp += 1;
+    }
+
+    fn pop_stack(&mut self) -> u16 {
+        self.sp -= 1;
+        self.stack[self.sp as usize]
+    }
+
     pub fn load_program(&mut self, program: Vec<u8>) {
         self.mem[0x200..(0x200 + program.len())].copy_from_slice(program.as_slice());
     }
 
     pub fn cycle(&mut self) -> State {
+        //let mut line = String::new();
+        //let _ = std::io::stdin().read_line(&mut line).unwrap();
         if self.pc >= 4096 {
             return State::Quit;
         }
@@ -72,44 +111,124 @@ impl Chip8 {
     }
 
     fn execute_instruction(&mut self) {
+        let nnn = self.op & 0xfff;
+        let n = self.op & 0xf;
+        let x = ((self.op >> 8) & 0xf) as usize;
+        let y = ((self.op >> 4) & 0xf) as usize;
+        let kk = (self.op & 0xff) as u8;
+
         match self.op >> 12 {
             0 => {
                 match self.op & 0xff {
                     0xE0 => {
                         self.display = [false; 64 * 32];
                     }
+                    0xEE => {
+                        self.pc = self.pop_stack() + 2;
+                    }
                     _ => {
-
+                        panic!("Invalid opcode");
                     }
                 }
             }
             1 => {
-                self.pc = self.op & 0xfff;
+                self.pc = nnn;
+            }
+            2 => {
+                self.push_stack(self.pc);
+                self.pc = nnn;
+            }
+            3 => {
+                if self.reg[x] == kk {
+                    self.pc += 2;
+                }
+            }
+            4 => {
+                if self.reg[x] != kk {
+                    self.pc += 2;
+                }
+            }
+            5 => {
+                if self.reg[x] == self.reg[y] {
+                    self.pc += 2;
+                }
             }
             6 => {
-                self.reg[((self.op >> 8) & 0xf) as usize] = (self.op & 0xff) as u8;
+                self.reg[x] = kk;
             }
             7 => {
-                self.reg[((self.op >> 8) & 0xf) as usize] += (self.op & 0xff) as u8;
+                self.reg[x] = self.reg[x].wrapping_add(kk);
+            }
+            8 => {
+                match n {
+                    0 => {
+                        self.reg[x] = self.reg[y];
+                    }
+                    1 => {
+                        self.reg[x] |= self.reg[y];
+                    }
+                    2 => {
+                        self.reg[x] &= self.reg[y];
+                    }
+                    3 => {
+                        self.reg[x] ^= self.reg[y];
+                    }
+                    4 => {
+                        let temp = self.reg[x];
+                        self.reg[x] = self.reg[x].wrapping_add(self.reg[y]);
+
+                        self.reg[0xf] = if self.reg[x] < temp { 1 } else { 0 };
+                    }
+                    5 => {
+                        self.reg[0xf] = if self.reg[x] > self.reg[y] { 1 } else { 0 };
+                        self.reg[x] = self.reg[x].wrapping_sub(self.reg[y]);
+                    }
+                    6 => {
+                        self.reg[0xf] = self.reg[x] & 1;
+                        self.reg[x] >>= 1;
+                    }
+                    7 => {
+                        self.reg[0xf] = if self.reg[x] < self.reg[y] { 1 } else { 0 };
+                        self.reg[x] = self.reg[y].wrapping_sub(self.reg[x]);
+                    }
+                    0xE => {
+                        self.reg[0xf] = self.reg[x] >> 7;
+                        self.reg[x] <<= 1;
+                    }
+                    _ => {
+                        panic!("Invalid opcode");
+                    }
+                }
+            }
+            9 => {
+                if self.reg[x] != self.reg[y] {
+                    self.pc += 2;
+                }
             }
             0xA => {
-                self.i_reg = self.op & 0xfff;
+                self.i_reg = nnn;
+            }
+            0xB => {
+                self.pc = nnn + self.reg[0] as u16;
+            }
+            0xC => {
+                let random = rand::thread_rng().gen_range(0..=255);
+                self.reg[x] = random & kk;
             }
             0xD => {
-                let x = self.reg[((self.op >> 8) & 0xf) as usize] % 64;
-                let y = self.reg[((self.op >> 4) & 0xf) as usize] % 32;
-                let n = self.op & 0xf;
-
+                let xc = (self.reg[x] % 64) as u16;
+                let yc = (self.reg[y] % 32) as u16;
                 self.reg[0xf] = 0;
 
                 for i in 0..n {
                     let sprite = self.mem[(self.i_reg + i) as usize];
 
                     for p in 0..8 {
-                        let pixel_index = ((y as u16 + i) * 64 + (x as u16 + p)) as usize;
+                        let pixel_index = ((yc + i) * 64 + (xc + p)) as usize;
 
-                        if pixel_index < 64 * 32 && x as u16 + p < 64 {
+                        if pixel_index < 64 * 32 && xc + p < 64 {
                             let on = if (sprite >> (7 - p)) & 1 == 0 { false } else { true }; 
+
                             if self.display[pixel_index] && on {
                                 self.reg[0xf] = 1;
                             }
@@ -121,9 +240,53 @@ impl Chip8 {
 
                 self.draw_flag = true;
             }
-            _ => {
+            0xE => {
+                panic!("Not implemented");
             }
+            0xF => {
+                match kk {
+                    7 => {
+                        self.reg[x] = self.dt;
+                    }
+                    0xA => {
+                        panic!("Not implemented");
+                    }
+                    0x15 => {
+                        self.dt = self.reg[x];
+                    }
+                    0x18 => {
+                        self.st = self.reg[x];
+                    }
+                    0x1E => {
+                        self.i_reg = self.i_reg.wrapping_add(self.reg[x] as u16);
+                    }
+                    0x29 => {
+                        self.i_reg = self.reg[x] as u16 * 5;
+                    }
 
+                    0x33 => {
+                        self.mem[self.i_reg as usize] = self.reg[x] / 100;
+                        self.mem[(self.i_reg + 1) as usize] = (self.reg[x] % 100) / 10;
+                        self.mem[(self.i_reg + 2) as usize] = self.reg[x] % 10;
+                    }
+                    0x55 => {
+                        for i in 0..(x + 1) {
+                            self.mem[(self.i_reg + i as u16) as usize] = self.reg[i];
+                        }
+                    }
+                    0x65 => {
+                        for i in 0..(x + 1) {
+                            self.reg[i] = self.mem[(self.i_reg + i as u16) as usize];
+                        }
+                    }
+                    _ => {
+                        panic!("Invalid opcode");
+                    }
+                }
+            }
+            _ => {
+                panic!("Invalid opcode");
+            }
         }
     }
 }

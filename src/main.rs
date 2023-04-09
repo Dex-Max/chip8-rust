@@ -10,13 +10,12 @@ use display::Display;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let mut processor = Chip8::new();
-
-    let bytes = match fs::read("./LOGO") {
+    let bytes = match fs::read(&args[1]) {
         Ok(t) => { t }
         Err(_) => { panic!("File not found!") }
     };
 
+    let mut processor = Chip8::new();
     processor.load_program(bytes);
 
     let mut display = Display::new();
