@@ -183,20 +183,24 @@ impl Chip8 {
                         self.reg[0xf] = if self.reg[x] < temp { 1 } else { 0 };
                     }
                     5 => {
-                        self.reg[0xf] = if self.reg[x] > self.reg[y] { 1 } else { 0 };
+                        let carry = if self.reg[x] > self.reg[y] { 1 } else { 0 };
                         self.reg[x] = self.reg[x].wrapping_sub(self.reg[y]);
+                        self.reg[0xf] = carry;
                     }
                     6 => {
-                        self.reg[0xf] = self.reg[x] & 1;
+                        let carry = self.reg[x] & 1;
                         self.reg[x] >>= 1;
+                        self.reg[0xf] = carry;
                     }
                     7 => {
-                        self.reg[0xf] = if self.reg[x] < self.reg[y] { 1 } else { 0 };
+                        let carry = if self.reg[x] < self.reg[y] { 1 } else { 0 };
                         self.reg[x] = self.reg[y].wrapping_sub(self.reg[x]);
+                        self.reg[0xf] = carry;
                     }
                     0xE => {
-                        self.reg[0xf] = self.reg[x] >> 7;
+                        let carry = self.reg[x] >> 7;
                         self.reg[x] <<= 1;
+                        self.reg[0xf] = carry;
                     }
                     _ => {
                         panic!("Invalid opcode");
