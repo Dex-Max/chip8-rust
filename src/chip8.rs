@@ -92,12 +92,14 @@ impl Chip8 {
             return State::Quit;
         }
 
+        println!("*****************");
         println!("OP: {:x}", self.op);
         println!("PC: {:x}", self.pc);
         println!("Regs:");
         for i in 0..16 {
-            println!("V{}: {}", i, self.reg[i]);
+            println!("V{}: {:x}", i, self.reg[i]);
         }
+        println!("SP: {}", self.sp);
 
         self.op = ((self.mem[self.pc as usize] as u16) << 8) | (self.mem[(self.pc + 1) as usize]) as u16;
         self.pc += 2;
@@ -124,7 +126,7 @@ impl Chip8 {
                         self.display = [false; 64 * 32];
                     }
                     0xEE => {
-                        self.pc = self.pop_stack() + 2;
+                        self.pc = self.pop_stack();
                     }
                     _ => {
                         panic!("Invalid opcode");
