@@ -92,15 +92,6 @@ impl Chip8 {
             return State::Quit;
         }
 
-        println!("*****************");
-        println!("OP: {:x}", self.op);
-        println!("PC: {:x}", self.pc);
-        println!("Regs:");
-        for i in 0..16 {
-            println!("V{}: {:x}", i, self.reg[i]);
-        }
-        println!("SP: {}", self.sp);
-
         self.keys = keyboard;
         self.op = ((self.mem[self.pc as usize] as u16) << 8) | (self.mem[(self.pc + 1) as usize]) as u16;
         self.pc += 2;
