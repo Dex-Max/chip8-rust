@@ -12,6 +12,11 @@ use chip8::Chip8;
 use chip8::State;
 use display::Display;
 
+const CLOCK_SPEED: u16 = 540;
+const FRAMES_PER_SECOND: u16 = 60;
+const CYCLES_PER_FRAME: u16 = CLOCK_SPEED / FRAMES_PER_SECOND;
+const NANOS_PER_FRAME: u128 = 1_000_000 / FRAMES_PER_SECOND as u128;
+
 fn main() {
     let args: Vec<String> = env::args().collect();
 
@@ -26,18 +31,19 @@ fn main() {
     let sdl = sdl2::init().unwrap();
     let mut display = Display::new(&sdl);
     let mut processor = Chip8::new();
-    let mut num_cycles = 0;
 
     processor.load_program(bytes);
 
     let mut tick_time = Instant::now();
+    let mut num_cycles = 0;
+
     loop {
-        if num_cycles > 16 {
+        if num_cycles > CYCLES_PER_FRAME {
             num_cycles = 0;
             if processor.dt > 0 { processor.dt -= 1 }
             if processor.st > 0 { processor.st -= 1 }
 
-            while tick_time.elapsed().as_nanos() < 16666 {}
+            while tick_time.elapsed().as_nanos() < NANOS_PER_FRAME {}
 
             tick_time = Instant::now();
         }
