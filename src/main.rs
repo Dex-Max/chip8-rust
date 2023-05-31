@@ -15,9 +15,12 @@ use display::Display;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
+    if args.len() < 2 {
+        return eprintln!("Usage: cargo run <PATH-TO-ROM>");
+    }
     let bytes = match fs::read(&args[1]) {
         Ok(t) => { t }
-        Err(_) => { panic!("File not found!") }
+        Err(_) => { return eprintln!("File {} not found!", &args[1]) }
     };
 
     let sdl = sdl2::init().unwrap();
